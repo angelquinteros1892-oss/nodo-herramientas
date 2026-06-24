@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin – NODO HERRAMIENTAS</title>
+  <style>
+    :root {
+      --negro: #111111;
+      --naranja: #FF6A00;
+      --gris-oscuro: #1A1A1A;
+      --gris-medio: #2A2A2A;
+      --gris-claro: #3A3A3A;
+      --gris-texto: #AAAAAA;
+      --blanco: #FFFFFF;
+      --verde: #25D366;
+      --rojo: #E53935;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--negro); color: var(--blanco); font-family: 'Segoe UI', Arial, sans-serif; padding: 0; }
+    
+    header {
+      background: var(--gris-oscuro);
+      border-bottom: 3px solid var(--naranja);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 18px; font-weight: 900; }
+    header h1 span { color: var(--naranja); }
+    header a { color: var(--naranja); text-decoration: none; font-size: 14px; font-weight: 700; padding: 8px 16px; border: 1px solid var(--naranja); border-radius: 6px; }
+    header a:hover { background: var(--naranja); color: var(--negro); }
+    
+    main { max-width: 900px; margin: 0 auto; padding: 32px 20px; }
+    
+    h2 { font-size: 22px; font-weight: 900; margin-bottom: 24px; border-bottom: 2px solid var(--gris-claro); padding-bottom: 12px; }
+    h2 span { color: var(--naranja); }
+    
+    .card {
+      background: var(--gris-oscuro);
+      border: 1px solid var(--gris-claro);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .card h3 .icon { font-size: 22px; }
+    .card p { font-size: 14px; color: var(--gris-texto); margin-bottom: 16px; line-height: 1.6; }
+    
+    .steps { list-style: none; counter-reset: step; }
+    .steps li {
+      counter-increment: step;
+      padding: 10px 0 10px 44px;
+      position: relative;
+      font-size: 14px;
+      color: var(--gris-texto);
+      border-bottom: 1px solid var(--gris-claro);
+    }
+    .steps li:last-child { border-bottom: none; }
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 28px;
+      height: 28px;
+      background: var(--naranja);
+      color: var(--negro);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 13px;
+    }
+    .steps li strong { color: var(--blanco); }
+    code {
+      background: var(--gris-medio);
+      color: var(--naranja);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+    }
+    pre {
+      background: var(--gris-medio);
+      border: 1px solid var(--gris-claro);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+      color: var(--naranja);
+      margin: 12px 0;
+      line-height: 1.6;
+    }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+    
+    .badge { 
+      display: inline-block; 
+      padding: 4px 12px; 
+      border-radius: 20px; 
+      font-size: 11px; 
+      font-weight: 700; 
+      text-transform: uppercase; 
+      letter-spacing: 1px;
+    }
+    .badge-ok { background: rgba(37,211,102,0.15); color: var(--verde); border: 1px solid rgba(37,211,102,0.3); }
+    .badge-warn { background: rgba(255,106,0,0.15); color: var(--naranja); border: 1px solid rgba(255,106,0,0.3); }
+    
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+    .info-item { background: var(--gris-medio); border-radius: 8px; padding: 12px; }
+    .info-item .label { font-size: 11px; color: var(--gris-texto); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .info-item .value { font-size: 22px; font-weight: 900; color: var(--naranja); }
+    
+    .warning { 
+      background: rgba(255,106,0,0.08); 
+      border: 1px solid rgba(255,106,0,0.3); 
+      border-radius: 8px; 
+      padding: 12px 16px; 
+      font-size: 13px; 
+      color: var(--naranja); 
+      margin-bottom: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    
+    footer { text-align: center; padding: 24px; color: var(--gris-texto); font-size: 12px; border-top: 1px solid var(--gris-claro); margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚙️ Panel Admin – <span>NODO HERRAMIENTAS</span></h1>
+  <a href="index.html">← Ver Catálogo</a>
+</header>
+
+<main>
+  <h2>📋 Panel de <span>Administración</span></h2>
+
+  <!-- ESTADO -->
+  <div class="card">
+    <h3><span class="icon">📊</span> Estado del Catálogo</h3>
+    <div class="info-grid">
+      <div class="info-item"><div class="label">Productos totales</div><div class="value" id="totalProd">—</div></div>
+      <div class="info-item"><div class="label">Categorías</div><div class="value" id="totalCat">—</div></div>
+      <div class="info-item"><div class="label">Precio más bajo</div><div class="value" id="precioMin">—</div></div>
+      <div class="info-item"><div class="label">Precio más alto</div><div class="value" id="precioMax">—</div></div>
+    </div>
+  </div>
+
+  <!-- ACTUALIZAR EXCEL -->
+  <div class="card">
+    <h3><span class="icon">📊</span> Actualizar Precios (desde Excel)</h3>
+    <p>Para actualizar los precios, debés regenerar el archivo <code>data/productos.json</code> a partir del Excel actualizado.</p>
+    
+    <div class="warning">⚠️ Siempre hacer una copia del JSON anterior antes de regenerar.</div>
+    
+    <ol class="steps">
+      <li><strong>Editá el Excel</strong> <code>Nodo_Herramientas_Lusqtoff_Listas_Mayorista_Minorista.xlsx</code> con los nuevos precios en la hoja <code>Base_Costos</code>, columnas F (precio compra).</li>
+      <li><strong>Instalá Python 3</strong> en tu computadora si no lo tenés: <a href="https://python.org" target="_blank" style="color:var(--naranja)">python.org</a></li>
+      <li>Instalá la librería necesaria: abrí una terminal y escribí <code>pip install openpyxl</code></li>
+      <li>Ejecutá el script: <code>python exportar.py</code> (el archivo Python que está en la raíz del proyecto)</li>
+      <li>El JSON se regenera automáticamente. <strong>Subí el nuevo <code>data/productos.json</code></strong> al hosting.</li>
+    </ol>
+  </div>
+
+  <!-- NÚMERO WHATSAPP -->
+  <div class="card">
+    <h3><span class="icon">💬</span> Cambiar número de WhatsApp</h3>
+    <p>Editá el archivo <code>js/app.js</code> y cambiá la línea al principio:</p>
+    <pre>const CONFIG = {
+  wsp: '5493517000000', // ← Poner el número real sin + ni espacios
+  wsp_display: '+54 9 351 700-0000',
+  ...
+};</pre>
+    <p>Formato correcto para Argentina: <code>5493511234567</code> (54 + 9 + código área sin 0 + número sin 15)</p>
+  </div>
+
+  <!-- PUBLICAR GITHUB PAGES -->
+  <div class="card">
+    <h3><span class="icon">🐙</span> Publicar en GitHub Pages</h3>
+    <ol class="steps">
+      <li>Creá una cuenta en <a href="https://github.com" target="_blank" style="color:var(--naranja)">github.com</a> si no tenés.</li>
+      <li>Creá un repositorio nuevo llamado <code>nodo-herramientas</code> (público).</li>
+      <li>Subí todos los archivos del proyecto al repositorio.</li>
+      <li>Andá a <strong>Settings → Pages → Source</strong>, elegí <code>main</code> branch y guardá.</li>
+      <li>Tu sitio estará en <code>https://tuusuario.github.io/nodo-herramientas</code></li>
+    </ol>
+    <div class="warning">⚠️ GitHub Pages requiere que el sitio use rutas relativas (ya configuradas).</div>
+  </div>
+
+  <!-- PUBLICAR HOSTINGER -->
+  <div class="card">
+    <h3><span class="icon">🌐</span> Publicar en Hostinger</h3>
+    <ol class="steps">
+      <li>Contratá un hosting en <a href="https://hostinger.com.ar" target="_blank" style="color:var(--naranja)">Hostinger Argentina</a>.</li>
+      <li>Accedé al panel <strong>hPanel → Administrador de Archivos</strong>.</li>
+      <li>Entrá a la carpeta <code>public_html</code>.</li>
+      <li>Subí <strong>todos los archivos y carpetas</strong> del proyecto directamente ahí.</li>
+      <li>El sitio estará activo en tu dominio contratado.</li>
+    </ol>
+  </div>
+
+  <!-- AGREGAR IMÁGENES -->
+  <div class="card">
+    <h3><span class="icon">🖼️</span> Agregar imágenes de productos</h3>
+    <p>Las imágenes se asocian por código de producto. Para agregar imágenes:</p>
+    <ol class="steps">
+      <li>Guardá la imagen con el nombre del código: ejemplo <code>AB-550.jpg</code></li>
+      <li>Subila a la carpeta <code>assets/imagenes/</code></li>
+      <li>En el archivo <code>data/productos.json</code>, buscá el producto por código y completá el campo <code>"imagen"</code>:</li>
+    </ol>
+    <pre>{ 
+  "codigo": "AB-550",
+  "imagen": "assets/imagenes/AB-550.jpg",
+  ...
+}</pre>
+    <p>Formatos soportados: <code>.jpg</code>, <code>.jpeg</code>, <code>.png</code>, <code>.webp</code>. Tamaño recomendado: 400x400px.</p>
+  </div>
+
+  <!-- ESTRUCTURA -->
+  <div class="card">
+    <h3><span class="icon">📁</span> Estructura del Proyecto</h3>
+    <pre>nodo-herramientas/
+├── index.html           ← Página principal
+├── admin.html           ← Este panel
+├── exportar.py          ← Script para regenerar JSON
+├── README.md            ← Documentación
+├── css/
+│   └── styles.css       ← Estilos
+├── js/
+│   └── app.js           ← Lógica de la app
+├── data/
+│   └── productos.json   ← Base de datos de productos
+└── assets/
+    └── imagenes/        ← Imágenes de productos</pre>
+  </div>
+
+</main>
+
+<footer>
+  Panel de Administración – NODO HERRAMIENTAS v1.0 | Distribuidor Oficial Lusqtoff
+</footer>
+
+<script>
+async function loadStats() {
+  try {
+    const res = await fetch('data/productos.json');
+    const products = await res.json();
+    const cats = [...new Set(products.map(p => p.categoria))];
+    const precios = products.map(p => p.precio_minorista).filter(Boolean);
+    document.getElementById('totalProd').textContent = products.length;
+    document.getElementById('totalCat').textContent = cats.length;
+    document.getElementById('precioMin').textContent = '$' + Math.min(...precios).toLocaleString('es-AR');
+    document.getElementById('precioMax').textContent = '$' + Math.max(...precios).toLocaleString('es-AR');
+  } catch(e) { console.log('No se pudieron cargar stats'); }
+}
+loadStats();
+</script>
+
+</body>
+</html>
