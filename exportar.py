@@ -1,146 +1,194 @@
 #!/usr/bin/env python3
 """
-NODO HERRAMIENTAS - Script para regenerar productos.json desde Excel
-Uso: python exportar.py
-Requiere: pip install openpyxl
+NODO HERRAMIENTAS - Importador de la lista maestra del proveedor.
+
+Fuente maestra:
+  ListaProductos.xlsx
+Hoja:
+  Productos - Servicios
+Columnas:
+  Categoria | Codigo | Nombre | $ Con IVA
+
+La columna "Categoria" del proveedor NO se usa directamente como categoría
+comercial de la tienda: suele representar marca/familia (LUSQTOFF, ORYX,
+OMAHA, HOGAR Y BAZAR, etc.). La tienda deriva una categoria_tienda según
+nombre/código para evitar que artículos válidos terminen en "Otros".
 """
 
-import openpyxl
 import json
 import os
+import re
 import shutil
+import unicodedata
 from datetime import datetime
 
-EXCEL_FILE = 'Nodo_Herramientas_Lusqtoff_Listas_Mayorista_Minorista.xlsx'
-OUTPUT_FILE = 'data/productos.json'
-BACKUP_DIR = 'data/backups'
+import openpyxl
 
-def formatear_precio(valor):
-    """Formatea el precio como entero redondeado."""
-    if valor is None or valor == '':
-        return 0
-    try:
-        return int(round(float(valor)))
-    except (ValueError, TypeError):
-        return 0
+EXCEL_FILE = "ListaProductos.xlsx"
+SHEET_NAME = "Productos - Servicios"
+OUTPUT_FILE = "data/productos.json"
+BACKUP_DIR = "data/backups"
 
-def limpiar_texto(texto):
-    """Limpia y normaliza texto."""
-    if texto is None:
-        return ''
-    return str(texto).strip().replace("'", "")
+
+def limpiar_texto(valor):
+    if valor is None:
+        return ""
+    return str(valor).strip()
+
+
+def normalizar(texto):
+    texto = limpiar_texto(texto).lower()
+    texto = unicodedata.normalize("NFD", texto)
+    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
+    return re.sub(r"\s+", " ", texto)
+
+
+REGLAS_CATEGORIA = [
+    ("Soldadura", [
+        "soldadora", "inverter", "electrodo", "mig", "tig", "mma",
+        "mascara fotosensible", "careta", "pinza masa", "porta electrodo",
+        "cincel sds",
+    ]),
+    ("Taladros y Atornilladores", [
+        "taladro", "atornillador", "rotomartillo", "martillo demoledor",
+        "percutor", "sds", "mecha", "broca",
+    ]),
+    ("Amoladoras y Corte", [
+        "amoladora", "esmeril", "cortadora", "sierra circular", "sensitiva",
+        "tronzadora", "disco de corte",
+    ]),
+    ("Carpintería y Madera", [
+        "lijadora", "cepillo electrico", "fresadora", "caladora",
+        "ingletadora", "sierra de banco",
+    ]),
+    ("Jardín y Exterior", [
+        "motosierra", "desmalezadora", "bordeadora", "cortacerco",
+        "cortadora de cesped", "sopladora", "podadora", "tijera de poda",
+        "hidrolavadora", "fumigador",
+    ]),
+    ("Compresores y Neumática", [
+        "compresor", "neumatic", "pistola para pintar", "pistola pintar",
+        "inflador", "manguera aire", "acople rapido",
+    ]),
+    ("Generadores y Bombas", [
+        "generador", "grupo electrogeno", "motobomba", "bomba de agua",
+    ]),
+    ("Automotor", [
+        "crique", "arrancador", "cable puente", "cargador de bateria",
+        "pulidora", "aspiradora auto", "llave impacto",
+    ]),
+    ("Herramientas Manuales", [
+        "llave", "destornillador", "pinza", "alicate", "martillo",
+        "prensa", "sargento", "tubo", "ratchet", "criquet", "cutter",
+        "cinta metrica", "nivel", "serrucho",
+    ]),
+    ("Sets y Kits", [
+        "set ", "kit ", "juego de ", "pack ", "caja de herramientas",
+        "maletin", "valija",
+    ]),
+    ("Medición", [
+        "tester", "multimetro", "laser", "medidor", "nivel laser",
+        "termometro", "pinza amperometrica",
+    ]),
+    ("Iluminación", [
+        "luz led", "reflector", "linterna", "luz de emergencia",
+    ]),
+    ("Hogar y Bazar", [
+        "cafetera", "parlante", "calefactor", "ventilador", "pava",
+        "aspiradora", "hidro", "cocina", "griferia",
+    ]),
+    ("Accesorios y Consumibles", [
+        "disco", "lija", "electrodo", "boquilla", "accesorio",
+        "cincel", "mecha", "broca", "bateria", "cargador",
+    ]),
+]
+
+
+def clasificar_categoria(nombre, codigo="", categoria_fuente=""):
+    texto = normalizar(f"{codigo} {nombre}")
+
+    # Prioridad: categorías específicas por descripción.
+    for categoria, palabras in REGLAS_CATEGORIA:
+        if any(normalizar(p) in texto for p in palabras):
+            return categoria
+
+    # Fallbacks útiles según familia del proveedor.
+    fuente = normalizar(categoria_fuente)
+    if "griferia" in fuente:
+        return "Hogar y Bazar"
+    if "hogar" in fuente or "bazar" in fuente:
+        return "Hogar y Bazar"
+
+    return "Otros"
+
 
 def exportar_productos():
-    """Lee el Excel y genera el JSON de productos."""
-    
-    print("=" * 50)
-    print("  NODO HERRAMIENTAS - Exportador de Productos")
-    print("=" * 50)
-    
-    # Verificar que existe el Excel
     if not os.path.exists(EXCEL_FILE):
-        print(f"\n❌ ERROR: No se encontró el archivo '{EXCEL_FILE}'")
-        print("   Asegurate de que el Excel esté en la misma carpeta que este script.")
-        return False
-    
-    print(f"\n📊 Leyendo: {EXCEL_FILE}")
-    
-    # Crear backup del JSON existente
+        raise FileNotFoundError(
+            f"No se encontró {EXCEL_FILE}. Debe estar en la raíz del proyecto."
+        )
+
+    wb = openpyxl.load_workbook(EXCEL_FILE, data_only=True)
+    if SHEET_NAME not in wb.sheetnames:
+        raise RuntimeError(
+            f"No existe la hoja '{SHEET_NAME}'. Hojas: {', '.join(wb.sheetnames)}"
+        )
+
+    ws = wb[SHEET_NAME]
+    productos = []
+
+    for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=1):
+        categoria_fuente, codigo, nombre, precio_con_iva = row[:4]
+
+        codigo = limpiar_texto(codigo)
+        nombre = limpiar_texto(nombre)
+        categoria_fuente = limpiar_texto(categoria_fuente)
+
+        if not codigo and not nombre:
+            continue
+
+        try:
+            precio = round(float(precio_con_iva or 0), 2)
+        except (TypeError, ValueError):
+            precio = 0
+
+        productos.append({
+            "id": i,
+            "codigo": codigo or f"PROD-{i}",
+            "nombre": nombre or codigo,
+            "categoria": clasificar_categoria(nombre, codigo, categoria_fuente),
+            "categoria_fuente": categoria_fuente,
+            "precio_con_iva": precio,
+            "precio_minorista": precio,
+            "imagen": "",
+            "activo": True,
+        })
+
     os.makedirs(BACKUP_DIR, exist_ok=True)
     if os.path.exists(OUTPUT_FILE):
-        fecha = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup = os.path.join(BACKUP_DIR, f'productos_{fecha}.json')
-        shutil.copy2(OUTPUT_FILE, backup)
-        print(f"💾 Backup guardado: {backup}")
-    
-    # Cargar Excel
-    try:
-        wb = openpyxl.load_workbook(EXCEL_FILE, data_only=True)
-    except Exception as e:
-        print(f"\n❌ ERROR al abrir el Excel: {e}")
-        return False
-    
-    if 'Base_Costos' not in wb.sheetnames:
-        print(f"\n❌ ERROR: No se encontró la hoja 'Base_Costos' en el Excel.")
-        print(f"   Hojas disponibles: {', '.join(wb.sheetnames)}")
-        return False
-    
-    ws = wb['Base_Costos']
-    print(f"   Hoja 'Base_Costos': {ws.max_row - 1} filas de datos")
-    
-    productos = []
-    errores = 0
-    
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[0] is None:
-            continue
-        
-        try:
-            id_prod = int(row[0])
-            categoria = limpiar_texto(row[1]) or 'Y Más Herramientas'
-            codigo = limpiar_texto(row[2]) or f'PROD-{id_prod}'
-            nombre = limpiar_texto(row[3])
-            detalle = limpiar_texto(row[4])
-            precio_compra = float(row[5]) if row[5] else 0
-            precio_mayorista = formatear_precio(row[7])
-            precio_minorista = formatear_precio(row[9])
-            precio_transferencia = formatear_precio(row[10])
-            pagina_pdf = int(row[14]) if row[14] else 0
-            estado = limpiar_texto(row[13]) or 'OK'
-            
-            # Calcular márgenes si los precios calculados son 0
-            if precio_mayorista == 0 and precio_compra > 0:
-                margen_may = float(row[6]) if row[6] and isinstance(row[6], float) else 0.25
-                precio_mayorista = int(round(precio_compra * (1 + margen_may) / 100) * 100)
-            
-            if precio_minorista == 0 and precio_compra > 0:
-                margen_min = float(row[8]) if row[8] and isinstance(row[8], float) else 0.45
-                precio_minorista = int(round(precio_compra * (1 + margen_min) / 100) * 100)
-            
-            if precio_transferencia == 0 and precio_minorista > 0:
-                precio_transferencia = int(round(precio_minorista * 0.95 / 100) * 100)
-            
-            productos.append({
-                "id": id_prod,
-                "codigo": codigo,
-                "nombre": nombre,
-                "detalle": detalle,
-                "categoria": categoria,
-                "precio_compra": round(precio_compra, 2),
-                "precio_mayorista": precio_mayorista,
-                "precio_minorista": precio_minorista,
-                "precio_transferencia": precio_transferencia,
-                "pagina_pdf": pagina_pdf,
-                "estado": estado,
-                "imagen": ""
-            })
-        except Exception as e:
-            errores += 1
-            print(f"   ⚠️ Error en fila {row[0]}: {e}")
-    
-    # Guardar JSON
-    os.makedirs('data', exist_ok=True)
-    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-        json.dump(productos, f, ensure_ascii=False, indent=2)
-    
-    print(f"\n✅ Exportación completada!")
-    print(f"   📦 Productos exportados: {len(productos)}")
-    print(f"   ⚠️  Errores: {errores}")
-    
-    # Resumen por categoría
-    cats = {}
-    for p in productos:
-        cats[p['categoria']] = cats.get(p['categoria'], 0) + 1
-    
-    print(f"\n📂 Resumen por categoría:")
-    for cat, n in sorted(cats.items()):
-        print(f"   {cat}: {n} productos")
-    
-    print(f"\n💾 Archivo guardado: {OUTPUT_FILE}")
-    print("\n🌐 Ahora subí el archivo actualizado a tu hosting.")
-    print("=" * 50)
-    
-    return True
+        fecha = datetime.now().strftime("%Y%m%d_%H%M%S")
+        shutil.copy2(
+            OUTPUT_FILE,
+            os.path.join(BACKUP_DIR, f"productos_{fecha}.json"),
+        )
 
-if __name__ == '__main__':
+    os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(productos, f, ensure_ascii=False, indent=2)
+
+    conteo = {}
+    for p in productos:
+        conteo[p["categoria"]] = conteo.get(p["categoria"], 0) + 1
+
+    print(f"Productos importados: {len(productos)}")
+    for categoria, cantidad in sorted(conteo.items()):
+        print(f"{categoria}: {cantidad}")
+
+    otros = [p for p in productos if p["categoria"] == "Otros"]
+    print(f"Pendientes de clasificar: {len(otros)}")
+
+    return productos
+
+
+if __name__ == "__main__":
     exportar_productos()
