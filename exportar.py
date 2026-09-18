@@ -30,6 +30,34 @@ def limpiar_texto(texto):
         return ''
     return str(texto).strip().replace("'", "")
 
+
+def clasificar_categoria(nombre, detalle='', codigo='', categoria_actual=''):
+    """Normaliza la categoría y evita que productos con foto/nuevos terminen en 'Otros'."""
+    categoria = limpiar_texto(categoria_actual)
+    if categoria and categoria.lower() not in {'otros', 'otro', 'y más herramientas', 'sin categoria', 'sin categoría'}:
+        return categoria
+
+    texto = f"{nombre} {detalle} {codigo}".lower()
+
+    reglas = [
+        ('Soldadoras / Accesorios', ['soldadora', 'inverter', 'electrodo', 'mig', 'tig', 'mma', 'careta soldar', 'pinza masa']),
+        ('Compresores y Neumática', ['compresor', 'neumatic', 'pistola pintar', 'inflador', 'manguera aire', 'acople rapido']),
+        ('Taladros / 220V / Batería / Accesorios', ['taladro', 'atornillador', 'rotomartillo', 'percutor', 'mecha', 'bateria', 'cargador']),
+        ('Amoladoras y Corte', ['amoladora', 'esmeril', 'disco corte', 'cortadora', 'sierra circular', 'sensitiva']),
+        ('Carpintería y Madera', ['lijadora', 'cepillo', 'fresadora', 'caladora', 'ingletadora', 'madera']),
+        ('Jardinería / Camping / Exterior', ['motosierra', 'bordeadora', 'desmalezadora', 'cortacerco', 'sopladora', 'jardin', 'camping', 'hidrolavadora']),
+        ('Generadores / Bomba de Agua', ['generador', 'grupo electrogeno', 'motobomba', 'bomba de agua']),
+        ('Estética y Accesorios Automotor', ['pulidora', 'aspiradora auto', 'arrancador', 'cargador bateria auto', 'compresor auto']),
+        ('Set de Herramientas Completos / Individuales', ['juego de herramientas', 'set de herramientas', 'kit herramientas', 'caja herramientas', 'llave tubo', 'crique']),
+        ('Accesorios / Consumibles', ['disco', 'mecha', 'broca', 'lija', 'electrodo', 'boquilla', 'accesorio', 'consumible']),
+    ]
+
+    for categoria_destino, palabras in reglas:
+        if any(p in texto for p in palabras):
+            return categoria_destino
+
+    return 'Y Más Herramientas'
+
 def exportar_productos():
     """Lee el Excel y genera el JSON de productos."""
     
@@ -77,10 +105,11 @@ def exportar_productos():
         
         try:
             id_prod = int(row[0])
-            categoria = limpiar_texto(row[1]) or 'Y Más Herramientas'
+            categoria_origen = limpiar_texto(row[1])
             codigo = limpiar_texto(row[2]) or f'PROD-{id_prod}'
             nombre = limpiar_texto(row[3])
             detalle = limpiar_texto(row[4])
+            categoria = clasificar_categoria(nombre, detalle, codigo, categoria_origen)
             precio_compra = float(row[5]) if row[5] else 0
             precio_mayorista = formatear_precio(row[7])
             precio_minorista = formatear_precio(row[9])
